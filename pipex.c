@@ -1,9 +1,12 @@
 #include "pipex.h"
 
-void exit_handler(int n_exit) {
-    if (n_exit == 1)
-        ft_putstr_fd("./pipex infile cmd cmd outfile\n", 2);
-    exit(0);
+void error_and_exit(int exit_code) {
+    if (exit_code == 1) {
+        fprintf(stderr, "Usage: ./pipex infile cmd1 cmd2 outfile\n");
+    } else if (exit_code == 2) {
+        perror("Error");
+    }
+    exit(exit_code);
 }
 
 int ft_strcmp(const char *s1, const char *s2) {
@@ -14,18 +17,13 @@ int ft_strcmp(const char *s1, const char *s2) {
     return (unsigned char)(*s1) - (unsigned char)(*s2);
 }
 
-int open_file(char *file, int in_or_out) {
-    int ret;
-
-    if (in_or_out == 0)
-        ret = open(file, O_RDONLY, 0777);
-    if (in_or_out == 1)
-        ret = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0777);
+int open_file(char *file, int flags) {
+    int ret = open(file, flags, 0777);
     if (ret == -1) {
         perror("Error al abrir archivo");
         exit(1);
     }
-    return (ret);
+    return ret;
 }
 
 void ft_free_tab(char **tab) {
@@ -58,76 +56,65 @@ char *my_getenv(char *name, char **env) {
 }
 
 char *get_path(char *cmd, char **env) {
-    int i = -1;
-    char *exec;
-    char **allpath;
-    char *path_part;
-    char **s_cmd;
+    char **allpath, *path_env, *full_path, *path_part;
+    int i = 0;
 
-    allpath = ft_split(my_getenv("PATH", env), ':');
-    s_cmd = ft_split(cmd, ' ');
-    while (allpath[++i]) {
+    if (!(path_env = my_getenv("PATH", env)) || !(allpath = ft_split(path_env, ':')))
+        return cmd;
+
+    while (allpath[i]) {
         path_part = ft_strjoin(allpath[i], "/");
-        exec = ft_strjoin(path_part, s_cmd[0]);
+        full_path = ft_strjoin(path_part, cmd);
         free(path_part);
-        if (access(exec, F_OK | X_OK) == 0) {
-            ft_free_tab(s_cmd);
+        if (access(full_path, F_OK | X_OK) == 0) {
             ft_free_tab(allpath);
-            return exec;
+            return full_path;
         }
-        free(exec);
+        free(full_path);
+        i++;
     }
     ft_free_tab(allpath);
-    ft_free_tab(s_cmd);
     return cmd;
 }
 
 void exec_cmd(char *cmd, char **env) {
-    char **s_cmd;
-    char *path;
-
-    s_cmd = ft_split(cmd, ' ');
-    path = get_path(s_cmd[0], env);
+    char **s_cmd = ft_split(cmd, ' ');
+    char *path = get_path(s_cmd[0], env);
     if (execve(path, s_cmd, env) == -1) {
-        ft_putstr_fd("pipex: command not found: ", 2);
-        ft_putendl_fd(s_cmd[0], 2);
+        fprintf(stderr, "pipex: command not found: %s\n", s_cmd[0]);
         ft_free_tab(s_cmd);
         exit(0);
     }
 }
 
-void child_process(char **av, int *p_fd, char **env) {
-    int fd;
-
-    fd = open_file(av[1], 0);
-    dup2(fd, 0);
-    dup2(p_fd[1], 1);
-    close(p_fd[0]);
-    exec_cmd(av[2], env);
+void execute_child(char **args, int *pipe_fd, char **env) {
+    int input_fd = open_file(args[1], O_RDONLY);
+    dup2(input_fd, STDIN_FILENO);
+    dup2(pipe_fd[1], STDOUT_FILENO);
+    close(pipe_fd[0]);
+    exec_cmd(args[2], env);
 }
 
-void parent_process(char **av, int *p_fd, char **env) {
-    int fd;
-
-    fd = open_file(av[4], 1);
-    dup2(fd, 1);
-    dup2(p_fd[0], 0);
-    close(p_fd[1]);
-    exec_cmd(av[3], env);
+void execute_parent(char **args, int *pipe_fd, char **env) {
+    int output_fd = open_file(args[4], O_WRONLY | O_CREAT | O_TRUNC);
+    dup2(output_fd, STDOUT_FILENO);
+    dup2(pipe_fd[0], STDIN_FILENO);
+    close(pipe_fd[1]);
+    exec_cmd(args[3], env);
 }
 
 int main(int ac, char **av, char **env) {
-    int p_fd[2];
+    int pipe_fd[2];
     pid_t pid;
 
     if (ac != 5)
-        exit_handler(1);
-    if (pipe(p_fd) == -1)
-        exit(-1);
+        error_and_exit(1);
+    if (pipe(pipe_fd) == -1)
+        error_and_exit(2);
     pid = fork();
     if (pid == -1)
-        exit(-1);
-    if (!pid)
-        child_process(av, p_fd, env);
-    parent_process(av, p_fd, env);
+        error_and_exit(2);
+    if (pid == 0)
+        execute_child(av, pipe_fd, env);
+    execute_parent(av, pipe_fd, env);
 }

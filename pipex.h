@@ -13,7 +13,7 @@ void exec_cmd(char *cmd, char **env);
 void child_process(char **av, int *p_fd, char **env);
 void parent_process(char **av, int *p_fd, char **env);
 int open_file(char *file, int in_or_out);
-void exit_handler(int n_exit);
+void error_and_exit(int exit_code);
 char *get_path(char *cmd, char **env);
 void ft_free_tab(char **tab);
 char *my_getenv(char *name, char **env);
