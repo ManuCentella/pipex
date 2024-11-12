@@ -6,11 +6,9 @@
 /*   By: mcentell <mcentell@student.42malaga.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/16 16:19:36 by mcentell          #+#    #+#             */
-/*   Updated: 2024/09/16 16:19:38 by mcentell         ###   ########.fr       */
+/*   Updated: 2024/11/05 10:23:46 by mcentell         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
-
-
 
 #include "../../inc/ft_printf.h"
 

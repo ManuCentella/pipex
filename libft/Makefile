@@ -50,7 +50,9 @@ FTSTR_DIR		=	$(SRC_DIR)ft_str/ft_split.c \
 					$(SRC_DIR)ft_str/ft_strnstr.c \
 					$(SRC_DIR)ft_str/ft_strrchr.c \
 					$(SRC_DIR)ft_str/ft_strtrim.c \
-					$(SRC_DIR)ft_str/ft_substr.c 
+					$(SRC_DIR)ft_str/ft_substr.c \
+					$(SRC_DIR)ft_str/ft_strcmp.c \
+
 
 FTLST_DIR		=	$(SRC_DIR)ft_lst/ft_lstadd_back_bonus.c \
 					$(SRC_DIR)ft_lst/ft_lstadd_front_bonus.c \
